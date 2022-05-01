@@ -102,7 +102,7 @@ celerybeat.pid
 # Environments
 .env
 .venv
-env/
+api/env/
 venv/
 ENV/
 env.bak/
@@ -127,12 +127,12 @@ dmypy.json
 .pyre/
 
 # React
-/node_modules
+web/node_modules
 /dist
 .cache/
 .envrc
 # Build directory
-/public
+web/public
 .DS_Store
 yarn-error.log
 .dccache
