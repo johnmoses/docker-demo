@@ -1,36 +1,30 @@
 version: '3.8'
 
 services:
-  api:
-    build: ./api
-    command: python manage.py runserver 0.0.0.0:8000
+  postgres:
+    image: postgres
+    expose:
+      - "5432"
     volumes:
-      - ./api/:/usr/src/api/
-    ports:
-      - 8000:8000
+      - postgres_data:/var/lib/postgresql/data
     env_file:
-      - ./api/.env
+      - ./.env.dev
+    healthcheck:
+      test: pg_isready -U postgres
+  api:
+    platform: linux/amd64
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    command: python manage.py runserver 0.0.0.0:8000 
+    volumes:
+      - ./api/:/api/
+    ports:
+    - 8000:8000
+    env_file:
+      - ./api/api/.env.dev
     depends_on:
       - postgres
-  # web:
-  #   build:
-  #     context: ./web
-  #     dockerfile: Dockerfile
-  #   command: serve -s build -l 3000
-  #   volumes:
-  #     - ./web/:/usr/src/web/
-  #   ports:
-  #     - "3000:3000"
-  #   depends_on:
-  #     - api
-  postgres:
-    image: postgres:13.0-alpine
-    volumes:
-      - postgres_data:/var/lib/postgresql/data/
-    environment:
-      - POSTGRES_USER=api_user
-      - POSTGRES_PASSWORD=api_pass
-      - POSTGRES_DB=api_dev
 
 volumes:
   postgres_data:

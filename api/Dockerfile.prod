@@ -1,71 +1,38 @@
-###########
-# BUILDER #
-###########
+FROM python:3.9-slim
 
-# pull official base image
-FROM python:3.9.6-alpine as builder
+ENV APP_HOME /api
+WORKDIR $APP_HOME
 
-# set work directory
-WORKDIR /usr/src/api
+# Create static and media folders
+# RUN mkdir $APP_HOME/staticfiles
+# RUN mkdir $APP_HOME/mediafiles
 
-# set environment variables
+# Removes output stream buffering, allowing for more efficient logging
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 
 # install psycopg2 dependencies
-RUN apk update \
-    && apk add postgresql-dev gcc python3-dev musl-dev
+# RUN apt-get update && apt-get install -y \
+#     binutils \
+#     libproj-dev \
+#     git
 
-# lint
 RUN pip install --upgrade pip
-RUN pip install flake8==3.9.2
-COPY . .
-# RUN flake8 --ignore=E122,E226,E231,E501,F401 .
 
-# install dependencies
+# Install dependencies
+COPY ./requirements/base.txt .
 COPY ./requirements/prod.txt .
-RUN pip wheel --no-cache-dir --no-deps --wheel-dir /usr/src/api/wheels -r prod.txt
+RUN pip install --no-cache-dir -r prod.txt
 
+CMD python manage.py runserver 0.0.0.0:8000 --settings=api.settings.prod
 
-#########
-# FINAL #
-#########
-
-# pull official base image
-FROM python:3.9.6-alpine
-
-# create directory for the app user
-RUN mkdir -p /home/api
-
-# create the api user
-RUN addgroup -S api && adduser -S api -G api
-
-# create the appropriate directories
-ENV HOME=/home/api
-ENV APP_HOME=/home/api/api
-RUN mkdir $APP_HOME
-RUN mkdir $APP_HOME/staticfiles
-WORKDIR $APP_HOME
-
-# install dependencies
-RUN apk update && apk add libpq
-COPY --from=builder /usr/src/api/wheels /wheels
-COPY --from=builder /usr/src/api/requirements/prod.txt .
-RUN pip install --no-cache /wheels/*
-
-# copy entrypoint.prod.sh
+# copy entrypoint.sh
 COPY ./entrypoint.prod.sh .
 RUN sed -i 's/\r$//g'  $APP_HOME/entrypoint.prod.sh
 RUN chmod +x  $APP_HOME/entrypoint.prod.sh
 
 # copy project
-COPY . $APP_HOME
-
-# chown all the files to the api user
-RUN chown -R api:api $APP_HOME
-
-# change to the api user
-USER api
+COPY . .
 
 # run entrypoint.prod.sh
-ENTRYPOINT ["/home/api/api/entrypoint.prod.sh"]
+ENTRYPOINT ["/api/entrypoint.prod.sh"]
